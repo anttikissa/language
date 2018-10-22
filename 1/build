@@ -1,3 +1,4 @@
 #!/bin/bash
 
 gcc compiler.c -o compiler
+gcc interpreter.c -o interpreter

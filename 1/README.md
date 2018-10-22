@@ -155,7 +155,7 @@ Unknown word: invalid program
 Program too long: just a bit too
 ```
 
-We now consider the [compiler](./compiler.c) done.
+We now consider [the compiler](./compiler.c) done.
 
 ## The compiler: a post-mortem
 
@@ -173,3 +173,82 @@ non-factors. Let's get something done instead!
 
 ## The interpreter
 
+The interpreter is pretty simple. We use the same machine-specific trick
+to read a word as we used to write it:
+
+```
+#include <stdio.h>
+
+unsigned int read_word() {
+	unsigned int word;
+	char *buf = (char *) &word;
+
+	for (int i = 0; i < sizeof word; i++) {
+		*buf++ = getchar();
+	}
+
+	return word;
+}
+```
+
+We again use `sizeof word` instead of hard-coding the length to 4 bytes,
+hiding the bold assumption that an `unsigned int` is always 4 bytes. Of
+course, if it suddenly changes, everything continues to work if all
+executables are recompiled - a perfectly fine tradeoff given the kature
+of the language at this phase.
+
+Then the main program:
+
+int main() {
+	int w = read_word();
+
+	if (w == 0x00000000) {
+		printf("Hello world\n");
+	} else if (w == 0x00000001) {
+	} else {
+		printf("Invalid word 0x%08x\n", w);
+		return 1;
+	}
+
+	return 0;
+}
+
+It's very simple. We can check that it works:
+
+```
+% ./interpreter < hello.exe
+Hello world
+% ./interpreter < halt.exe
+%
+```
+
+And also that you can't feed it just anything:
+
+% echo rubbish | ./interpreter
+Invalid word 0x62627572
+
+One thing to notice, though, is that it can consume valid programs that are
+followed by rubbish:
+
+```
+% (cat hello.exe; echo rubbish) | ./interpreter
+Hello world
+```
+
+This is to be expected given the nature of binary code. It's meant for someone
+to execute. If the interpreter that executes it notices an error while doing
+it, an error should be produced; but if there's something hidden after a
+correct program, the interpreter doesn't really need to care. (In this sense,
+interpreters and compilers are different; never mind the fact that actually at
+this phase our compiler does exactly the same!)
+
+## The interpreter: post-mortem
+
+There's not much to say at this phase. The interpreter seems a little
+bit less complex than the compiler, and I expect that they continue to
+have this relation as the language grows bigger. Basically, the
+interpreter is a simple inner loop that goes through a machine
+instruction one at a time (currently, just processing one instruction),
+while the compiler might need more complexity eventually.
+
+The whole interpreter [is here.](./interpreter.c)
